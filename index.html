@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Versammlungsdatenbank Berlin - Historische Versionenn</title>
+    <link rel="stylesheet" href="pico.min.css">
+</head>
+<body>
+    <header>
+        <h1>Versammlungsdatenbank Berlin - Historische Versionen</h1>
+        <p>Mit dieser Seite können Sie durch die historischen Versionen der Versammlungsdatenbank Berlin blättern. Durch Auswahl eines bestimmten Zeitstempels wird der Status der Versammlungsdatenbank zu diesem Zeitpunkt angezeigt.</p>
+    </header>
+
+    <label for="dropdown">Wählen Sie einen Zeitstempel:</label>
+    <select id="dropdown">
+        <!-- Dropdown options will be populated dynamically -->
+    </select>
+
+    <table id="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Datum</th>
+                <th>Von</th>
+                <th>Bis</th>
+                <th>Thema</th>
+                <th>PLZ</th>
+                <th>Straße Nr</th>
+                <th>Aufzugsstrecke</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Table content will be populated dynamically -->
+        </tbody>
+    </table>
+
+    <div id="error-message" style="display: none;"></div>
+
+    <script>
+        // Base path for fetching JSON files
+        var base_path = "https://raw.githubusercontent.com/cyroxx/demodiff_raw/main";
+
+        // Construct the summary URL using the base path
+        var summaryUrl = base_path + "/summary/file_dict.json";
+
+        // Function to display an error message
+        function displayErrorMessage(message) {
+            var errorMessage = document.getElementById("error-message");
+            errorMessage.textContent = message;
+            errorMessage.style.display = "block";
+        }
+
+        // Function to clear the error message
+        function clearErrorMessage() {
+            var errorMessage = document.getElementById("error-message");
+            errorMessage.textContent = "";
+            errorMessage.style.display = "none";
+        }
+
+        // Function to fetch and display JSON data
+        function fetchAndDisplayData(selectedFilename) {
+            fetch(base_path + "/" + selectedFilename)
+                .then(response => response.json())
+                .then(data => {
+                    var table = document.getElementById("table");
+
+                    // Clear previous table content
+                    table.querySelector("tbody").innerHTML = "";
+
+                    // Get the data from the "index" key
+                    var indexData = data["index"];
+
+                    // Check if the index data is an array
+                    if (Array.isArray(indexData)) {
+                        // Clear the error message if the data is successfully loaded
+                        clearErrorMessage();
+
+                        // Iterate over the index data and create table rows
+                        indexData.forEach(function(obj) {
+                            var row = table.querySelector("tbody").insertRow();
+                            var keys = ['id', 'datum', 'von', 'bis', 'thema', 'plz', 'strasse_nr', 'aufzugsstrecke'];
+
+                            // Iterate over the keys and add cell values
+                            keys.forEach(function(key) {
+                                var cell = row.insertCell();
+                                cell.innerHTML = obj[key];
+                            });
+                        });
+                    } else {
+                        // Display an error message if the index data is not an array
+                        displayErrorMessage("Ungültiges JSON-Datenformat.");
+                    }
+                })
+                .catch(error => {
+                    // Display an error message if there is an error fetching or parsing the JSON data
+                    displayErrorMessage("Fehler beim Abrufen der JSON-Daten.");
+                    console.log("Error fetching JSON:", error);
+                });
+        }
+
+        // Fetch the JSON file from the summary URL
+        fetch(summaryUrl)
+            .then(response => response.json())
+            .then(data => {
+                var dropdown = document.getElementById("dropdown");
+
+                // Iterate over the keys in the JSON data
+                Object.keys(data).forEach(function(key) {
+                    // Create an option element for each key
+                    var option = document.createElement("option");
+                    option.value = key;
+                    option.text = key;
+
+                    dropdown.appendChild(option);
+                });
+
+                // Get the timestamp from the URL
+                var timestamp = new URLSearchParams(window.location.search).get("timestamp");
+
+                if (timestamp) {
+                    // Pre-select the option based on the timestamp from the URL
+                    dropdown.value = timestamp;
+                } else {
+                    // Select the last option by default if no timestamp is specified in the URL
+                    dropdown.selectedIndex = dropdown.options.length - 1;
+                }
+
+                // Get the initially selected filename
+                var initiallySelectedFilename = data[dropdown.value];
+
+                // Fetch and display the initially selected data
+                fetchAndDisplayData(initiallySelectedFilename);
+
+                // Handle dropdown change event
+                dropdown.addEventListener("change", function() {
+                    var selectedFilename = data[this.value];
+                    fetchAndDisplayData(selectedFilename);
+
+                    // Update the URL with the selected timestamp
+                    var url = new URL(window.location);
+                    url.searchParams.set("timestamp", this.value);
+                    window.history.pushState(null, null, url);
+                });
+            })
+            .catch(error => {
+                // Display an error message if there is an error fetching or parsing the summary JSON data
+                displayErrorMessage("Fehler beim Abrufen der Zusammenfassungs-JSON-Daten.");
+                console.log("Error fetching JSON:", error);
+            });
+    </script>
+</body>
+</html>

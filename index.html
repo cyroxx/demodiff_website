@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Versammlungsdatenbank Berlin - Historische Versionenn</title>
+    <title>Versammlungsdatenbank Berlin - Historische Versionen</title>
     <link rel="stylesheet" href="pico.min.css">
+    <style>
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -10,15 +16,21 @@
         <p>Mit dieser Seite können Sie durch die historischen Versionen der Versammlungsdatenbank Berlin blättern. Durch Auswahl eines bestimmten Zeitstempels wird der Status der Versammlungsdatenbank zu diesem Zeitpunkt angezeigt.</p>
     </header>
 
-    <label for="dropdown">Wählen Sie einen Zeitstempel:</label>
-    <select id="dropdown">
-        <!-- Dropdown options will be populated dynamically -->
-    </select>
+    <div>
+        <label for="dropdown">Wählen Sie einen Zeitstempel:</label>
+        <select id="dropdown">
+            <!-- Dropdown options will be populated dynamically -->
+        </select>
+
+        <button id="resetButton">Zurücksetzen auf neueste Version</button>
+    </div>
+
+    <label for="topicInput">Filtern nach Thema:</label>
+    <input type="text" id="topicInput" placeholder="Thema eingeben...">
 
     <table id="table">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Datum</th>
                 <th>Von</th>
                 <th>Bis</th>
@@ -57,7 +69,7 @@
         }
 
         // Function to fetch and display JSON data
-        function fetchAndDisplayData(selectedFilename) {
+        function fetchAndDisplayData(selectedFilename, topicQuery) {
             fetch(base_path + "/" + selectedFilename)
                 .then(response => response.json())
                 .then(data => {
@@ -74,17 +86,31 @@
                         // Clear the error message if the data is successfully loaded
                         clearErrorMessage();
 
-                        // Iterate over the index data and create table rows
-                        indexData.forEach(function(obj) {
-                            var row = table.querySelector("tbody").insertRow();
-                            var keys = ['id', 'datum', 'von', 'bis', 'thema', 'plz', 'strasse_nr', 'aufzugsstrecke'];
+                        // Filter the data based on the topic query
+                        var filteredData = indexData;
+                        if (topicQuery) {
+                            filteredData = indexData.filter(obj => obj.thema.toLowerCase().includes(topicQuery.toLowerCase()));
+                        }
 
-                            // Iterate over the keys and add cell values
-                            keys.forEach(function(key) {
-                                var cell = row.insertCell();
-                                cell.innerHTML = obj[key];
+                        // Iterate over the filtered data and create table rows
+                        filteredData.forEach(function(obj) {
+                            var row = table.querySelector("tbody").insertRow();
+                            Object.keys(obj).forEach(function(key) {
+                                // Skip the "@original" key and the index number
+                                if (key !== "@original" && key !== "id") {
+                                    var cell = row.insertCell();
+                                    var cellValue = obj[key];
+                                    if (topicQuery && key === "thema") {
+                                        // Highlight the matched text in the "Thema" field
+                                        cellValue = cellValue.replace(new RegExp(topicQuery, "gi"), function(match) {
+                                            return "<span class=\"highlight\">" + match + "</span>";
+                                        });
+                                    }
+                                    cell.innerHTML = cellValue;
+                                }
                             });
                         });
+                        
                     } else {
                         // Display an error message if the index data is not an array
                         displayErrorMessage("Ungültiges JSON-Datenformat.");
@@ -102,6 +128,8 @@
             .then(response => response.json())
             .then(data => {
                 var dropdown = document.getElementById("dropdown");
+                var topicInput = document.getElementById("topicInput");
+                var resetButton = document.getElementById("resetButton");
 
                 // Iterate over the keys in the JSON data
                 Object.keys(data).forEach(function(key) {
@@ -133,11 +161,35 @@
                 // Handle dropdown change event
                 dropdown.addEventListener("change", function() {
                     var selectedFilename = data[this.value];
-                    fetchAndDisplayData(selectedFilename);
+                    var topicQuery = topicInput.value;
+                    fetchAndDisplayData(selectedFilename, topicQuery);
 
                     // Update the URL with the selected timestamp
                     var url = new URL(window.location);
                     url.searchParams.set("timestamp", this.value);
+                    window.history.pushState(null, null, url);
+                });
+
+                // Handle topic input event
+                topicInput.addEventListener("input", function() {
+                    var selectedFilename = data[dropdown.value];
+                    var topicQuery = this.value;
+                    fetchAndDisplayData(selectedFilename, topicQuery);
+                });
+
+                // Handle reset button click event
+                resetButton.addEventListener("click", function() {
+                    // Select the last option by default
+                    dropdown.selectedIndex = dropdown.options.length - 1;
+
+                    // Fetch and display the latest data
+                    var selectedFilename = data[dropdown.value];
+                    var topicQuery = topicInput.value;
+                    fetchAndDisplayData(selectedFilename, topicQuery);
+
+                    // Remove the timestamp parameter from the URL
+                    var url = new URL(window.location);
+                    url.searchParams.delete("timestamp");
                     window.history.pushState(null, null, url);
                 });
             })

@@ -31,12 +31,13 @@
     <table id="table">
         <thead>
             <tr>
+                <th>ID</th>
                 <th>Datum</th>
                 <th>Von</th>
                 <th>Bis</th>
                 <th>Thema</th>
                 <th>PLZ</th>
-                <th>Straße Nr</th>
+                <th>Straße/Nr</th>
                 <th>Aufzugsstrecke</th>
             </tr>
         </thead>
@@ -94,22 +95,22 @@
 
                         // Iterate over the filtered data and create table rows
                         filteredData.forEach(function(obj) {
-                            var row = table.querySelector("tbody").insertRow();
-                            Object.keys(obj).forEach(function(key) {
-                                // Skip the "@original" key and the index number
-                                if (key !== "@original" && key !== "id") {
-                                    var cell = row.insertCell();
-                                    var cellValue = obj[key];
-                                    if (topicQuery && key === "thema") {
-                                        // Highlight the matched text in the "Thema" field
-                                        cellValue = cellValue.replace(new RegExp(topicQuery, "gi"), function(match) {
-                                            return "<span class=\"highlight\">" + match + "</span>";
-                                        });
-                                    }
-                                    cell.innerHTML = cellValue;
-                                }
+                        var row = table.querySelector("tbody").insertRow();
+                        var columns = ['id', 'datum', 'von', 'bis', 'thema', 'plz', 'strasse_nr', 'aufzugsstrecke'];
+
+                        columns.forEach(function(key) {
+                            var cell = row.insertCell();
+                            var cellValue = obj[key];
+                            if (topicQuery && key === "thema") {
+                            // Highlight the matched text in the "Thema" field
+                            cellValue = cellValue.replace(new RegExp(topicQuery, "gi"), function(match) {
+                                return "<span class=\"highlight\">" + match + "</span>";
                             });
+                            }
+                            cell.innerHTML = cellValue;
                         });
+                        });
+
                         
                     } else {
                         // Display an error message if the index data is not an array

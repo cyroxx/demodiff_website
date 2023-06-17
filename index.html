@@ -3,12 +3,6 @@
 <head>
     <title>Versammlungsdatenbank Berlin - Historische Versionen</title>
     <link rel="stylesheet" href="pico.min.css">
-    <style>
-        .highlight {
-            background-color: yellow;
-            font-weight: bold;
-        }
-    </style>
 </head>
 <body>
     <header>
@@ -102,14 +96,15 @@
                             var cell = row.insertCell();
                             var cellValue = obj[key];
                             if (topicQuery && key === "thema") {
-                            // Highlight the matched text in the "Thema" field
+                            // Highlight the matched text in the "Thema" field using <mark> element
                             cellValue = cellValue.replace(new RegExp(topicQuery, "gi"), function(match) {
-                                return "<span class=\"highlight\">" + match + "</span>";
+                                return "<mark>" + match + "</mark>";
                             });
                             }
                             cell.innerHTML = cellValue;
                         });
                         });
+
 
                         
                     } else {

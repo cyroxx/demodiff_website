@@ -22,6 +22,8 @@
     <label for="topicInput">Filtern nach Thema:</label>
     <input type="text" id="topicInput" placeholder="Thema eingeben...">
 
+    <button id="copyLinkButton">Kopieren Sie den Link</button>
+
     <table id="table">
         <thead>
             <tr>
@@ -89,24 +91,21 @@
 
                         // Iterate over the filtered data and create table rows
                         filteredData.forEach(function(obj) {
-                        var row = table.querySelector("tbody").insertRow();
-                        var columns = ['id', 'datum', 'von', 'bis', 'thema', 'plz', 'strasse_nr', 'aufzugsstrecke'];
+                            var row = table.querySelector("tbody").insertRow();
+                            var columns = ['id', 'datum', 'von', 'bis', 'thema', 'plz', 'strasse_nr', 'aufzugsstrecke'];
 
-                        columns.forEach(function(key) {
-                            var cell = row.insertCell();
-                            var cellValue = obj[key];
-                            if (topicQuery && key === "thema") {
-                            // Highlight the matched text in the "Thema" field using <mark> element
-                            cellValue = cellValue.replace(new RegExp(topicQuery, "gi"), function(match) {
-                                return "<mark>" + match + "</mark>";
+                            columns.forEach(function(key) {
+                                var cell = row.insertCell();
+                                var cellValue = obj[key];
+                                if (topicQuery && key === "thema") {
+                                    // Highlight the matched text in the "Thema" field using <mark> element
+                                    cellValue = cellValue.replace(new RegExp(topicQuery, "gi"), function(match) {
+                                        return "<mark>" + match + "</mark>";
+                                    });
+                                }
+                                cell.innerHTML = cellValue;
                             });
-                            }
-                            cell.innerHTML = cellValue;
                         });
-                        });
-
-
-                        
                     } else {
                         // Display an error message if the index data is not an array
                         displayErrorMessage("Ungültiges JSON-Datenformat.");
@@ -126,6 +125,7 @@
                 var dropdown = document.getElementById("dropdown");
                 var topicInput = document.getElementById("topicInput");
                 var resetButton = document.getElementById("resetButton");
+                var copyLinkButton = document.getElementById("copyLinkButton");
 
                 // Iterate over the keys in the JSON data
                 Object.keys(data).forEach(function(key) {
@@ -138,7 +138,9 @@
                 });
 
                 // Get the timestamp from the URL
-                var timestamp = new URLSearchParams(window.location.search).get("timestamp");
+                var urlParams = new URLSearchParams(window.location.search);
+                var timestamp = urlParams.get("timestamp");
+                var filter = urlParams.get("filter");
 
                 if (timestamp) {
                     // Pre-select the option based on the timestamp from the URL
@@ -148,11 +150,14 @@
                     dropdown.selectedIndex = dropdown.options.length - 1;
                 }
 
+                // Set the topic filter input value
+                topicInput.value = filter || '';
+
                 // Get the initially selected filename
                 var initiallySelectedFilename = data[dropdown.value];
 
                 // Fetch and display the initially selected data
-                fetchAndDisplayData(initiallySelectedFilename);
+                fetchAndDisplayData(initiallySelectedFilename, filter);
 
                 // Handle dropdown change event
                 dropdown.addEventListener("change", function() {
@@ -160,9 +165,10 @@
                     var topicQuery = topicInput.value;
                     fetchAndDisplayData(selectedFilename, topicQuery);
 
-                    // Update the URL with the selected timestamp
+                    // Update the URL with the selected timestamp and filter
                     var url = new URL(window.location);
                     url.searchParams.set("timestamp", this.value);
+                    url.searchParams.set("filter", topicQuery);
                     window.history.pushState(null, null, url);
                 });
 
@@ -183,10 +189,27 @@
                     var topicQuery = topicInput.value;
                     fetchAndDisplayData(selectedFilename, topicQuery);
 
-                    // Remove the timestamp parameter from the URL
+                    // Remove the timestamp and filter parameters from the URL
                     var url = new URL(window.location);
                     url.searchParams.delete("timestamp");
+                    url.searchParams.delete("filter");
                     window.history.pushState(null, null, url);
+                });
+
+                // Handle copy link button click event
+                copyLinkButton.addEventListener("click", function() {
+                    var url = new URL(window.location);
+                    url.searchParams.set("timestamp", dropdown.value);
+                    url.searchParams.set("filter", topicInput.value);
+
+                    navigator.clipboard.writeText(url.href)
+                        .then(function() {
+                            console.log("Link copied to clipboard.");
+                            alert("Der Link wurde in die Zwischenablage kopiert.");
+                        })
+                        .catch(function(error) {
+                            console.error("Error copying link to clipboard:", error);
+                        });
                 });
             })
             .catch(error => {
